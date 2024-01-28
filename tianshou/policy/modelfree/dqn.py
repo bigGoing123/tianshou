@@ -61,7 +61,7 @@ class DQNPolicy(BasePolicy[TDQNTrainingStats], Generic[TDQNTrainingStats]):
         *,
         model: torch.nn.Module,
         optim: torch.optim.Optimizer,
-        # TODO: type violates Liskov substitution principle
+            # TODO: type violates Liskov substitution principle
         action_space: gym.spaces.Discrete,
         discount_factor: float = 0.99,
         estimation_step: int = 1,
