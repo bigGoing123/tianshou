@@ -2,6 +2,7 @@ import gymnasium as gym
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import tianshou as ts
+from tianshou.utils.net.common import Net
 task = 'CartPole-v1'
 lr, epoch, batch_size = 1e-3, 10, 64
 train_num, test_num = 10, 100
@@ -14,7 +15,7 @@ logger = ts.utils.TensorboardLogger(SummaryWriter('log/dqn'))  # TensorBoard is 
 # you can also try with SubprocVectorEnv
 train_envs = ts.env.DummyVectorEnv([lambda: gym.make(task) for _ in range(train_num)])
 test_envs = ts.env.DummyVectorEnv([lambda: gym.make(task) for _ in range(test_num)])
-from tianshou.utils.net.common import Net
+
 # you can define other net by following the API:
 # https://tianshou.readthedocs.io/en/master/01_tutorials/00_dqn.html#build-the-network
 env = gym.make(task, render_mode="human")
