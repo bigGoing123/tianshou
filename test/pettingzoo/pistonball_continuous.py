@@ -282,3 +282,4 @@ def watch(args: argparse.Namespace = get_args(), policy: BasePolicy | None = Non
     collector_result = collector.collect(n_episode=1, render=args.render)
     rews, lens = collector_result["rews"], collector_result["lens"]
     print(f"Final reward: {rews[:, 0].mean()}, length: {lens.mean()}")
+watch(args=get_args())

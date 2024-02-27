@@ -2,6 +2,7 @@ import argparse
 import os
 from copy import deepcopy
 from functools import partial
+from typing import Tuple, Any
 
 import gymnasium
 import numpy as np
@@ -9,7 +10,7 @@ import torch
 from pettingzoo.classic import tictactoe_v3
 from torch.utils.tensorboard import SummaryWriter
 
-from tianshou.data import Collector, VectorReplayBuffer
+from tianshou.data import Collector, VectorReplayBuffer, InfoStats
 from tianshou.env import DummyVectorEnv
 from tianshou.env.pettingzoo_env import PettingZooEnv
 from tianshou.policy import BasePolicy, DQNPolicy, MultiAgentPolicyManager, RandomPolicy
@@ -17,7 +18,7 @@ from tianshou.trainer import OffpolicyTrainer
 from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import Net
 
-
+#根据当前文件的所有代码，写出每一个函数的功能注释
 def get_env(render_mode: str | None = None):
     return PettingZooEnv(tictactoe_v3.env(render_mode=render_mode))
 
@@ -145,10 +146,11 @@ def train_agent(
     agent_learn: BasePolicy | None = None,
     agent_opponent: BasePolicy | None = None,
     optim: torch.optim.Optimizer | None = None,
-) -> tuple[dict, BasePolicy]:
+) -> tuple[InfoStats, Any]:
     train_envs = DummyVectorEnv([get_env for _ in range(args.training_num)])
     test_envs = DummyVectorEnv([get_env for _ in range(args.test_num)])
     # seed
+
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     train_envs.seed(args.seed)
@@ -230,5 +232,6 @@ def watch(
     policy.policies[agents[args.agent_id - 1]].set_eps(args.eps_test)
     collector = Collector(policy, env, exploration_noise=True)
     result = collector.collect(n_episode=1, render=args.render)
-    rews, lens = result["rews"], result["lens"]
-    print(f"Final reward: {rews[:, args.agent_id - 1].mean()}, length: {lens.mean()}")
+    print(result)
+    # rews, lens = result.rews, result.lens
+    # print(f"Final reward: {rews[:, args.agent_id - 1].mean()}, length: {lens.mean()}")

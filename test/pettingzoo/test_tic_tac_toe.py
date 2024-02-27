@@ -7,7 +7,6 @@ def test_tic_tac_toe(args=get_args()):
     if args.watch:
         watch(args)
         return
-
     result, agent = train_agent(args)
     assert result.best_reward >= args.win_rate
 

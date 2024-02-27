@@ -145,7 +145,7 @@ def test_ppo(args=get_args()):
     if __name__ == "__main__":
         pprint.pprint(result)
         # Let's watch its performance!
-        env = gym.make(args.task)
+        env = gym.make(args.task,render_mode="human")
         policy.eval()
         collector = Collector(policy, env)
         result = collector.collect(n_episode=1, render=args.render)
