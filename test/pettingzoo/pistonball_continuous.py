@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from pettingzoo.butterfly import pistonball_v6
 from torch import nn
-from torch.distributions import Independent, Normal
+from torch.distributions import Distribution, Independent, Normal
 from torch.utils.tensorboard import SummaryWriter
 
 from tianshou.data import Collector, VectorReplayBuffer
@@ -80,7 +80,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--n-pistons",
         type=int,
-        default=3,
+        default=10,
         help="Number of pistons(agents) in the env",
     )
     parser.add_argument("--n-step", type=int, default=100)
@@ -99,7 +99,7 @@ def get_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--watch",
-        default=False,
+        default=True,
         action="store_true",
         help="no training, watch the play of pre-trained models",
     )
@@ -132,7 +132,9 @@ def get_args() -> argparse.Namespace:
 
 
 def get_env(args: argparse.Namespace = get_args()):
-    return PettingZooEnv(pistonball_v6.env(continuous=True, n_pistons=args.n_pistons))
+    return PettingZooEnv(pistonball_v6.env(continuous=True,
+                                           n_pistons=args.n_pistons,
+                                           render_mode="human" if args.watch  else "rgb_array"))
 
 
 def get_agents(
@@ -181,14 +183,14 @@ def get_agents(
                     torch.nn.init.zeros_(m.bias)
             optim = torch.optim.Adam(set(actor.parameters()).union(critic.parameters()), lr=args.lr)
 
-            def dist(*logits):
+            def dist(*logits: torch.Tensor) -> Distribution:
                 return Independent(Normal(*logits), 1)
 
-            agent = PPOPolicy(
-                actor,
-                critic,
-                optim,
-                dist,
+            agent: PPOPolicy = PPOPolicy(
+                actor=actor,
+                critic=critic,
+                optim=optim,
+                dist_fn=dist,
                 discount_factor=args.gamma,
                 max_grad_norm=args.max_grad_norm,
                 eps_clip=args.eps_clip,
@@ -207,7 +209,11 @@ def get_agents(
             agents.append(agent)
             optims.append(optim)
 
-    policy = MultiAgentPolicyManager(agents, env, action_scaling=True, action_bound_method="clip")
+    policy = MultiAgentPolicyManager(
+        policies=agents,
+        env=env,
+        action_scaling=True,
+        action_bound_method="clip")
     return policy, optims, env.agents
 
 
@@ -241,10 +247,10 @@ def train_agent(
     writer.add_text("args", str(args))
     logger = TensorboardLogger(writer)
 
-    def save_best_fn(policy):
+    def save_best_fn(policy: BasePolicy) -> None:
         pass
 
-    def stop_fn(mean_rewards):
+    def stop_fn(mean_rewards: float) -> bool:
         return False
 
     def reward_metric(rews):
@@ -280,6 +286,6 @@ def watch(args: argparse.Namespace = get_args(), policy: BasePolicy | None = Non
     policy.eval()
     collector = Collector(policy, env)
     collector_result = collector.collect(n_episode=1, render=args.render)
-    rews, lens = collector_result["rews"], collector_result["lens"]
-    print(f"Final reward: {rews[:, 0].mean()}, length: {lens.mean()}")
-watch(args=get_args())
+    # rews, lens = collector_result["rews"], collector_result["lens"]
+    # print(f"Final reward: {rews[:, 0].mean()}, length: {lens.mean()}")
+    print(collector_result)

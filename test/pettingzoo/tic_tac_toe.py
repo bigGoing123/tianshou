@@ -18,7 +18,6 @@ from tianshou.trainer import OffpolicyTrainer
 from tianshou.utils import TensorboardLogger
 from tianshou.utils.net.common import Net
 
-#根据当前文件的所有代码，写出每一个函数的功能注释
 def get_env(render_mode: str | None = None):
     return PettingZooEnv(tictactoe_v3.env(render_mode=render_mode))
 
