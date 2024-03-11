@@ -3,8 +3,8 @@ import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
 import random
-from pettingzoo.mpe import simple_adversary_v3
 import rl_utils
+
 def onehot_from_logits(logits, eps=0.01):
     ''' 生成最优动作的独热（one-hot）形式 '''
     logits = logits.view(1, -1)  # 将一维张量转为二维
@@ -157,6 +157,7 @@ class MADDPG:
         for agt in self.agents:
             agt.soft_update(agt.actor, agt.target_actor, self.tau)
             agt.soft_update(agt.critic, agt.target_critic, self.tau)
+from pettingzoo.mpe import simple_adversary_v3
 num_episodes = 5000
 episode_length = 25  # 每条序列的最大长度
 buffer_size = 100000
@@ -170,8 +171,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 update_interval = 100
 minimal_size = 4000
 
-env = simple_adversary_v3.parallel_env(render_mode="human")
-env.reset(seed=42)
+env_id = "simple_adversary"
+env = simple_adversary_v3.parallel_env(render_mode="rgb_array")
+env.reset()
 replay_buffer = rl_utils.ReplayBuffer(buffer_size)
 
 state_dims = []
@@ -180,61 +182,69 @@ for action_space in env.action_spaces.values():
     action_dims.append(action_space.n)
 for state_space in env.observation_spaces.values():
     state_dims.append(state_space.shape[0])
-critic_input_dim = sum(state_dims) + sum(action_dims)
-
+critic_input_dim = np.sum(state_dims) + np.sum(action_dims)
 maddpg = MADDPG(env, device, actor_lr, critic_lr, hidden_dim, state_dims,
                 action_dims, critic_input_dim, gamma, tau)
-def evaluate( maddpg, n_episode=10, episode_length=25):
+
+
+def evaluate(maddpg, n_episode=10, episode_length=25):
     # 对学习的策略进行评估,此时不会进行探索
-    env = simple_adversary_v3.parallel_env(render_mode="human")
+    env = simple_adversary_v3.parallel_env(render_mode="rgb_array")
     env.reset()
     returns = np.zeros(len(env.agents))
     for _ in range(n_episode):
-        sum=0
+        sum = 0
+
         for t_i in range(episode_length):
             actions = maddpg.take_action(env.state(), explore=False)
             actions = dict(zip(env.agents, actions))
             observation, reward, _, _, _ = env.step(actions)
-            sum+=list(reward.values())[1]
-        returns += sum/episode_length   # 计算智能体的平均回报
-    return returns / n_episode
+            # print(len(reward.values()))
+            # sum+=list(reward.values())[1]
+            returns += np.array(list(reward.values())) / n_episode
+
+        env.reset()
+    env.close()
+    return returns.tolist()
 
 
 return_list = []  # 记录每一轮的回报（return）
 total_step = 0
+
 for i_episode in range(num_episodes):
     env.reset()
     # ep_returns = np.zeros(len(env.agents))
-    for e_i in range(episode_length):
+    # for e_i in range(episode_length):
+    while env.agents:
         actions = maddpg.take_action(env.state(), explore=True)
         actions = dict(zip(env.agents, actions))
-        print(total_step,actions)
+        # print(total_step,actions)
         observation, reward, termination, truncation, info = env.step(actions)
         done = termination or truncation
 
         replay_buffer.add(env.state(), actions, reward, observation, done)
 
         total_step += 1
-        if replay_buffer.size(
-        ) >= minimal_size and total_step % update_interval == 0:
-            sample = replay_buffer.sample(batch_size)
+        if replay_buffer.size() >= minimal_size and total_step % update_interval == 0:
+            sample = replay_buffer.sample(batch_size=1)
 
 
-            def stack_array(x):
-                rearranged = [[sub_x[i] for sub_x in x]
-                              for i in range(len(x[0]))]
-                return [
-                    torch.FloatTensor(np.vstack(aa)).to(device)
-                    for aa in rearranged
-                ]
-
-
-            sample = [stack_array(x) for x in sample]
+            # def stack_array(x):
+            #     rearranged = [[sub_x[i] for sub_x
+            #                   for i in range(len(x[0]))]
+            #     return [
+            #         torch.FloatTensor(np.vstack(aa)).to(device)
+            #         for aa in rearranged
+            #     ]
+            #
+            #
+            # sample = [stack_array(x) for x in sample]
             for a_i in range(len(env.agents)):
                 maddpg.update(sample, a_i)
             maddpg.update_all_targets()
-        break
+
     if (i_episode + 1) % 100 == 0:
         ep_returns = evaluate(maddpg, n_episode=100)
         return_list.append(ep_returns)
         print(f"Episode: {i_episode + 1}, {ep_returns}")
+    # env.close()
