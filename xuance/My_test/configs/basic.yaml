@@ -1,16 +1,12 @@
-dl_toolbox: "torch"  # The deep learning toolbox. Choices: "torch", "mindspore", "tensorflow"
-
+dl_toolbox: "torch"  # The deep learning toolbox. Choices: "torch", "mindspore", "tensorlayer"
 project_name: "XuanCe_Benchmark"
-logger: "tensorboard"  # Choices: "tensorboard", "wandb".
+logger: "wandb"  # Choices: tensorboard, wandb.
 wandb_user_name: "1256405274"
-
-render: True
+render: False
 render_mode: 'human' # Choices: 'human', 'rgb_array'.
-fps: 50
 test_mode: False
-test_steps: 2000
-
 device: "cuda:0"
+
 agent: "MADDPG"  # the learning algorithms_marl
 env_name: "mpe"
 env_id: "simple_spread_v3"
@@ -49,5 +45,4 @@ grad_clip_norm: 0.5
 eval_interval: 100000
 test_episode: 5
 log_dir: "./logs/maddpg/"
-model_dir: "/models/maddpg/"
-abs_dir: "E:/项目/github/tianshou/xuance/My_test"
+model_dir: "./models/maddpg/"
